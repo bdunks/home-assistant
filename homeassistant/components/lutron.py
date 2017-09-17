@@ -14,7 +14,7 @@ from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
 from homeassistant.helpers import discovery
 from homeassistant.helpers.entity import Entity
 
-REQUIREMENTS = ['pylutron==0.1.0']
+REQUIREMENTS = ['pylutron==0.2.0']
 
 DOMAIN = 'lutron'
 
@@ -37,7 +37,7 @@ def setup(hass, base_config):
     from pylutron import Lutron
 
     hass.data[LUTRON_CONTROLLER] = None
-    hass.data[LUTRON_DEVICES] = {'light': [], 'cover': []}
+    hass.data[LUTRON_DEVICES] = {'light': [], 'cover': [], 'scene': []}
 
     config = base_config.get(DOMAIN)
     hass.data[LUTRON_CONTROLLER] = Lutron(
@@ -54,8 +54,12 @@ def setup(hass, base_config):
                 hass.data[LUTRON_DEVICES]['cover'].append((area.name, output))
             else:
                 hass.data[LUTRON_DEVICES]['light'].append((area.name, output))
+        for keypad in area.keypads:
+            for button in filter(lambda b: b.button_type == 'SingleAction',
+                                 keypad.buttons):
+                hass.data[LUTRON_DEVICES]['scene'].append((keypad, button))
 
-    for component in ('light', 'cover'):
+    for component in ('light', 'cover', 'scene'):
         discovery.load_platform(hass, component, DOMAIN, None, base_config)
     return True
 
