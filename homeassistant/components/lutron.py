@@ -15,7 +15,6 @@ from homeassistant.helpers import discovery
 from homeassistant.helpers.entity import Entity
 
 REQUIREMENTS = ['pylutron==0.2.0']
-
 DOMAIN = 'lutron'
 
 _LOGGER = logging.getLogger(__name__)
@@ -34,10 +33,12 @@ CONFIG_SCHEMA = vol.Schema({
 
 def setup(hass, base_config):
     """Set up the Lutron component."""
-    from pylutron import Lutron
+    from pylutron import Lutron, Keypad
 
     hass.data[LUTRON_CONTROLLER] = None
+
     hass.data[LUTRON_DEVICES] = {'light': [], 'cover': [], 'scene': []}
+    hass.data[DOMAIN] = {'entities': {}}
 
     config = base_config.get(DOMAIN)
     hass.data[LUTRON_CONTROLLER] = Lutron(
@@ -60,6 +61,7 @@ def setup(hass, base_config):
                 hass.data[LUTRON_DEVICES]['scene'].append((keypad, button))
 
     for component in ('light', 'cover', 'scene'):
+        hass.data[DOMAIN]['entities'][component] = []
         discovery.load_platform(hass, component, DOMAIN, None, base_config)
     return True
 
@@ -83,6 +85,12 @@ class LutronDevice(Entity):
 
     def _update_callback(self, _device):
         """Run when invoked by pylutron when the device state changes."""
+        if hasattr(_device, 'last_action') and \
+                _device.last_action == _device.ACTION_PRESS:
+            for scene in self.hass.data[DOMAIN]['entities']['scene']:
+                if scene._button._num == _device.last_button_pressed._num:
+                    scene.raise_activate_event()
+
         self.schedule_update_ha_state()
 
     @property
