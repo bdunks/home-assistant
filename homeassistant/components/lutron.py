@@ -81,7 +81,7 @@ class LutronDevice(Entity):
             self._update_callback
         )
 
-    def _update_callback(self, _device, agrs):
+    def _update_callback(self, _device):
         """Run when invoked by pylutron when the device state changes."""
         self.schedule_update_ha_state()
 
