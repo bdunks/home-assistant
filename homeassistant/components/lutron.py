@@ -89,7 +89,7 @@ class LutronDevice(Entity):
                 _device.last_action == _device.ACTION_PRESS:
             for scene in self.hass.data[DOMAIN]['entities']['scene']:
                 if scene._button._num == _device.last_button_pressed._num:
-                    scene.raise_activate_event()
+                    scene.notify_activated()
 
         self.schedule_update_ha_state()
 

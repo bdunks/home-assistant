@@ -4,9 +4,9 @@ Support for Lutron scenes.
 For more details about this platform, please refer to the documentation at
 https://home-assistant.io/components/scene.lutron/
 """
-import asyncio
 import logging
 
+from homeassistant.const import ATTR_ENTITY_ID
 from homeassistant.components.scene import Scene
 from homeassistant.components.lutron import (
     LutronDevice, LUTRON_DEVICES, LUTRON_CONTROLLER, DOMAIN)
@@ -15,8 +15,14 @@ _LOGGER = logging.getLogger(__name__)
 
 DEPENDENCIES = ['lutron']
 
+ATTR_BUTTON_NAME = 'button_name'
+ATTR_KEYPAD_NAME = 'keypad_name'
+
+EVENT_SCENE_ACTIVATED = 'lutron.scene_activated'
+
 STATE_ACTIVE = 'active'
 STATE_INACTIVE = 'inactive'
+
 
 def setup_platform(hass, config, add_devices, discovery_info=None):
     """Set up the Lutron Scene."""
@@ -57,8 +63,14 @@ class LutronScene(LutronDevice, Scene):
             state = STATE_ACTIVE
         return state
 
-    def raise_activate_event(self):
-        _LOGGER.debug("Raising activate for {}".format(self.name))
+    def notify_activated(self):
+        self.hass.bus.fire(EVENT_SCENE_ACTIVATED, {
+            ATTR_ENTITY_ID: self.entity_id,
+            ATTR_BUTTON_NAME: self._button.name,
+            ATTR_KEYPAD_NAME: self._keypad.name
+        })
+        _LOGGER.debug(
+                "Raising `EVENT_SCENE_ACTIVATED` for {}".format(self.name))
 
     def activate(self, **kwargs):
         """Activate the scene."""
