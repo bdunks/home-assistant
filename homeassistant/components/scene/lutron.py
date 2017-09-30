@@ -27,8 +27,8 @@ STATE_INACTIVE = 'inactive'
 def setup_platform(hass, config, add_devices, discovery_info=None):
     """Set up the Lutron Scene."""
     devs = []
-    for (keypad, button) in hass.data[LUTRON_DEVICES]['scene']:
-        dev = LutronScene(keypad, button, hass)
+    for button in hass.data[LUTRON_DEVICES]['scene']:
+        dev = LutronScene(button, hass)
         devs.append(dev)
 
     add_devices(devs, True)
@@ -38,17 +38,15 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
 class LutronScene(LutronDevice, Scene):
     """Representation of a Lutron scene."""
 
-    def __init__(self, keypad, button, hass):
+    def __init__(self, button, hass):
         """Initialize the Lutron scene."""
-        self._button = button
-        self._keypad = keypad
-        LutronDevice.__init__(self, "", keypad, hass.data[LUTRON_CONTROLLER])
+        LutronDevice.__init__(self, None, button, hass.data[LUTRON_CONTROLLER])
         hass.data[DOMAIN]['entities']['scene'].append(self)
 
     @property
     def name(self):
         """Return the name of the scene."""
-        return self._button.name
+        return self._lutron_device.name
 
     @property
     def should_poll(self):
@@ -59,19 +57,17 @@ class LutronScene(LutronDevice, Scene):
     def state(self):
         """Return the state of the scene."""
         state = STATE_INACTIVE
-        if self._button.led.state:
+        if self._lutron_device.led.state:
             state = STATE_ACTIVE
         return state
 
-    def notify_activated(self):
+    def _update_callback(self, _device):
         self.hass.bus.fire(EVENT_SCENE_ACTIVATED, {
             ATTR_ENTITY_ID: self.entity_id,
-            ATTR_BUTTON_NAME: self._button.name,
-            ATTR_KEYPAD_NAME: self._keypad.name
+            ATTR_BUTTON_NAME: self._lutron_device.name,
         })
-        _LOGGER.debug(
-                "Raising `EVENT_SCENE_ACTIVATED` for {}".format(self.name))
+        return LutronDevice._update_callback(self, _device)
 
     def activate(self, **kwargs):
         """Activate the scene."""
-        self._keypad.press(self._button)
+        self._lutron_device.press()

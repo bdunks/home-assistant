@@ -33,7 +33,7 @@ CONFIG_SCHEMA = vol.Schema({
 
 def setup(hass, base_config):
     """Set up the Lutron component."""
-    from pylutron import Lutron, Keypad
+    from pylutron import Lutron
 
     hass.data[LUTRON_CONTROLLER] = None
 
@@ -56,9 +56,10 @@ def setup(hass, base_config):
             else:
                 hass.data[LUTRON_DEVICES]['light'].append((area.name, output))
         for keypad in area.keypads:
-            for button in filter(lambda b: b.button_type == 'SingleAction',
+            for button in filter(lambda b: b.button_type == 'SingleAction'
+                                 and "Button" not in b.name,
                                  keypad.buttons):
-                hass.data[LUTRON_DEVICES]['scene'].append((keypad, button))
+                hass.data[LUTRON_DEVICES]['scene'].append(button)
 
     for component in ('light', 'cover', 'scene'):
         hass.data[DOMAIN]['entities'][component] = []
@@ -85,12 +86,6 @@ class LutronDevice(Entity):
 
     def _update_callback(self, _device):
         """Run when invoked by pylutron when the device state changes."""
-        if hasattr(_device, 'last_action') and \
-                _device.last_action == _device.ACTION_PRESS:
-            for scene in self.hass.data[DOMAIN]['entities']['scene']:
-                if scene._button._num == _device.last_button_pressed._num:
-                    scene.notify_activated()
-
         self.schedule_update_ha_state()
 
     @property
