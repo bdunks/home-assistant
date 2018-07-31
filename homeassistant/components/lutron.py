@@ -14,7 +14,8 @@ from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
 from homeassistant.helpers import discovery
 from homeassistant.helpers.entity import Entity
 
-REQUIREMENTS = ['pylutron==0.2.0']
+#REQUIREMENTS = ['pylutron==0.2.0']
+REQUIREMENTS = ['git+https://github.com/bdunks/pylutron.git@homeowner-keypads#pylutron==0.2.1']
 DOMAIN = 'lutron'
 
 _LOGGER = logging.getLogger(__name__)
@@ -38,7 +39,6 @@ def setup(hass, base_config):
     hass.data[LUTRON_CONTROLLER] = None
 
     hass.data[LUTRON_DEVICES] = {'light': [], 'cover': [], 'scene': []}
-    hass.data[DOMAIN] = {'entities': {}}
 
     config = base_config.get(DOMAIN)
     hass.data[LUTRON_CONTROLLER] = Lutron(
@@ -56,13 +56,12 @@ def setup(hass, base_config):
             else:
                 hass.data[LUTRON_DEVICES]['light'].append((area.name, output))
         for keypad in area.keypads:
-            for button in filter(lambda b: b.button_type == 'SingleAction'
-                                 and "Button" not in b.name,
-                                 keypad.buttons):
-                hass.data[LUTRON_DEVICES]['scene'].append(button)
+            for button in keypad.buttons:
+                if button.button_type == 'SingleAction' and 'Button' not in button.name:
+                    # TODO - Evaluate: hass.data[LUTRON_DEVICES]['scene'].append((keypad,button)) to get more info during scene activation
+                    hass.data[LUTRON_DEVICES]['scene'].append(button)
 
     for component in ('light', 'cover', 'scene'):
-        hass.data[DOMAIN]['entities'][component] = []
         discovery.load_platform(hass, component, DOMAIN, None, base_config)
     return True
 
@@ -80,11 +79,11 @@ class LutronDevice(Entity):
     def async_added_to_hass(self):
         """Register callbacks."""
         self.hass.async_add_job(
-            self._controller.subscribe, self._lutron_device,
-            self._update_callback
+            self._lutron_device.subscribe, self._update_callback,
+            None
         )
 
-    def _update_callback(self, _device):
+    def _update_callback(self, *args):
         """Run when invoked by pylutron when the device state changes."""
         self.schedule_update_ha_state()
 
